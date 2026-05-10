@@ -9,7 +9,7 @@ const AT_HEADS  = { "Authorization": `Bearer ${AT_TOKEN}`, "Content-Type": "appl
 
 // ─── Cloudinary config ────────────────────────────────────────────
 const CLD_CLOUD  = "dtvvrilh3";
-const CLD_PRESET = "ml_default";
+const CLD_PRESET = "u88d2paj";
 
 async function uploadToCloudinary(file) {
   const formData = new FormData();
