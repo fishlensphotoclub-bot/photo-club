@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect } from "react";
 
 // ─── Airtable config ──────────────────────────────────────────────
-const AT_TOKEN  = "patmEgNDTnInnUfcn";
+const AT_TOKEN  = "patcwuqVxd4W83mBj.46c35fa9bcc26690305cf4d43927a353f5210375b4322be7d47aeaac0a580384";
 const AT_BASE   = "app3D6NUVB17eYK9W";
 const AT_TABLE  = "Submissions";
 const AT_URL    = `https://api.airtable.com/v0/${AT_BASE}/${AT_TABLE}`;
