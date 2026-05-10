@@ -11,9 +11,45 @@ const AT_HEADS  = { "Authorization": `Bearer ${AT_TOKEN}`, "Content-Type": "appl
 const CLD_CLOUD  = "dtvvrilh3";
 const CLD_PRESET = "u88d2paj";
 
+async function compressImage(file, maxSizeMB = 8) {
+  return new Promise((resolve) => {
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const img = new Image();
+      img.onload = () => {
+        const canvas = document.createElement("canvas");
+        let { width, height } = img;
+        const maxDim = 2400;
+        if (width > maxDim || height > maxDim) {
+          if (width > height) { height = Math.round(height * maxDim / width); width = maxDim; }
+          else { width = Math.round(width * maxDim / height); height = maxDim; }
+        }
+        canvas.width = width;
+        canvas.height = height;
+        canvas.getContext("2d").drawImage(img, 0, 0, width, height);
+        let quality = 0.85;
+        const tryCompress = () => {
+          canvas.toBlob((blob) => {
+            if (blob.size <= maxSizeMB * 1024 * 1024 || quality < 0.3) {
+              resolve(new File([blob], file.name, { type: "image/jpeg" }));
+            } else {
+              quality -= 0.1;
+              tryCompress();
+            }
+          }, "image/jpeg", quality);
+        };
+        tryCompress();
+      };
+      img.src = e.target.result;
+    };
+    reader.readAsDataURL(file);
+  });
+}
+
 async function uploadToCloudinary(file) {
+  const compressed = await compressImage(file);
   const formData = new FormData();
-  formData.append("file", file);
+  formData.append("file", compressed);
   formData.append("upload_preset", CLD_PRESET);
   const res = await fetch(`https://api.cloudinary.com/v1_1/${CLD_CLOUD}/image/upload`, {
     method: "POST",
