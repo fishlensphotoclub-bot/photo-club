@@ -7,6 +7,24 @@ const AT_TABLE  = "Submissions";
 const AT_URL    = `https://api.airtable.com/v0/${AT_BASE}/${AT_TABLE}`;
 const AT_HEADS  = { "Authorization": `Bearer ${AT_TOKEN}`, "Content-Type": "application/json" };
 
+// ─── Cloudinary config ────────────────────────────────────────────
+const CLD_CLOUD  = "dtvvrilh3";
+const CLD_PRESET = "ml_default";
+
+async function uploadToCloudinary(file) {
+  const formData = new FormData();
+  formData.append("file", file);
+  formData.append("upload_preset", CLD_PRESET);
+  const res = await fetch(`https://api.cloudinary.com/v1_1/${CLD_CLOUD}/image/upload`, {
+    method: "POST",
+    body: formData,
+  });
+  const data = await res.json();
+  if (!data.secure_url) throw new Error("Cloudinary upload failed");
+  return data.secure_url;
+}
+// ─────────────────────────────────────────────────────────────────
+
 async function fetchPhotos() {
   const res = await fetch(`${AT_URL}?sort[0][field]=Month&sort[0][direction]=desc`, { headers: AT_HEADS });
   const data = await res.json();
@@ -42,7 +60,6 @@ async function addFeedbackRemote(photo, newComment) {
     body: JSON.stringify({ fields: { Feedback: updated } }),
   });
 }
-// ─────────────────────────────────────────────────────────────────
 
 const THEMES = [
   { month: "May 2026", theme: "Shutter Speed", description: "Freeze a moment or blur the world in motion — show us what shutter speed can do.", color: "#e8a838" },
@@ -57,9 +74,11 @@ export default function App() {
   const [selected,     setSelected]     = useState(null);
   const [feedbackText, setFeedbackText] = useState("");
   const [submitting,   setSubmitting]   = useState(false);
+  const [uploadStatus, setUploadStatus] = useState(""); // "", "uploading", "done"
   const [submitted,    setSubmitted]    = useState(false);
   const [form,         setForm]         = useState({ author: "", title: "", note: "", url: "" });
   const [previewUrl,   setPreviewUrl]   = useState("");
+  const [selectedFile, setSelectedFile] = useState(null);
   const fileRef = useRef();
 
   useEffect(() => {
@@ -75,26 +94,36 @@ export default function App() {
   function handleFileChange(e) {
     const file = e.target.files[0];
     if (!file) return;
+    setSelectedFile(file);
     const reader = new FileReader();
     reader.onload = ev => setPreviewUrl(ev.target.result);
     reader.readAsDataURL(file);
   }
 
   async function handleSubmit() {
-    if (!form.author || !form.title || (!previewUrl && !form.url)) return;
+    if (!form.author || !form.title || (!selectedFile && !form.url)) return;
     setSubmitting(true);
     try {
+      let imageUrl = form.url;
+      if (selectedFile) {
+        setUploadStatus("uploading");
+        imageUrl = await uploadToCloudinary(selectedFile);
+        setUploadStatus("done");
+      }
       const newPhoto = await createPhoto({
         title: form.title, author: form.author,
-        note: form.note,   url: previewUrl || form.url,
+        note: form.note,   url: imageUrl,
         month: THEMES[0].month,
       });
       setPhotos(prev => [newPhoto, ...prev]);
       setSubmitted(true);
       setForm({ author: "", title: "", note: "", url: "" });
       setPreviewUrl("");
+      setSelectedFile(null);
+      setUploadStatus("");
       setTimeout(() => { setSubmitted(false); setView("gallery"); setActiveMonth(THEMES[0].month); }, 2000);
     } catch {
+      setUploadStatus("");
       alert("Submission failed. Please check your connection and try again.");
     } finally {
       setSubmitting(false);
@@ -289,6 +318,11 @@ export default function App() {
                       : "Click to choose a file"}
                   </div>
                   <input ref={fileRef} type="file" accept="image/*" onChange={handleFileChange} style={{ display: "none" }} />
+                  {selectedFile && (
+                    <div style={{ fontSize: 12, color: "#666", marginTop: 6 }}>
+                      Selected: {selectedFile.name}
+                    </div>
+                  )}
                 </div>
 
                 <div>
@@ -303,13 +337,17 @@ export default function App() {
                     style={{ ...inputStyle, resize: "vertical" }} />
                 </div>
 
+                {uploadStatus === "uploading" && (
+                  <div style={{ fontSize: 13, color: THEMES[0].color }}>⏳ Uploading image…</div>
+                )}
+
                 <button onClick={handleSubmit} disabled={submitting} style={{
                   background: submitting ? "#555" : THEMES[0].color,
                   border: "none", borderRadius: 3, padding: "14px 28px",
                   color: "#0d0d0d", fontSize: 14, letterSpacing: "0.08em", textTransform: "uppercase",
                   cursor: submitting ? "default" : "pointer", fontFamily: "inherit", marginTop: 4,
                 }}>
-                  {submitting ? "Submitting…" : "Submit Photo →"}
+                  {uploadStatus === "uploading" ? "Uploading image…" : submitting ? "Submitting…" : "Submit Photo →"}
                 </button>
               </div>
             )}
