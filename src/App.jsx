@@ -97,6 +97,10 @@ async function addFeedbackRemote(photo, newComment) {
   });
 }
 
+async function deletePhotoRemote(id) {
+  await fetch(`${AT_URL}/${id}`, { method: "DELETE", headers: AT_HEADS });
+}
+
 const THEMES = [
   { month: "May 2026", theme: "Shutter Speed", description: "Freeze a moment or blur the world in motion — show us what shutter speed can do.", color: "#e8a838" },
 ];
@@ -176,6 +180,13 @@ export default function App() {
     await addFeedbackRemote(photo, comment);
   }
 
+  async function handleDelete(photo) {
+    if (!window.confirm(`Delete "${photo.title}"? This cannot be undone.`)) return;
+    await deletePhotoRemote(photo.id);
+    setPhotos(prev => prev.filter(p => p.id !== photo.id));
+    setSelected(null);
+  }
+
   const inputStyle = {
     width: "100%", background: "#111", border: "1px solid #2a2a2a",
     borderRadius: 3, color: "#f0ece3", padding: "12px 16px", fontSize: 14,
@@ -193,7 +204,7 @@ export default function App() {
       }}>
         <div>
           <div style={{ fontSize: 11, letterSpacing: "0.3em", textTransform: "uppercase", color: "#666", marginBottom: 4 }}>Monthly Challenge</div>
-          <div style={{ fontSize: 26, fontWeight: 400, letterSpacing: "-0.02em" }}>Fishlens Photo Club</div>
+          <div style={{ fontSize: 26, fontWeight: 400, letterSpacing: "-0.02em" }}>Fisheye Photo Club</div>
         </div>
         <nav style={{ display: "flex", gap: 8 }}>
           {["gallery","submit"].map(v => (
@@ -316,6 +327,7 @@ export default function App() {
                     padding: "10px 18px", color: "#0d0d0d", fontSize: 13, cursor: "pointer", fontFamily: "inherit",
                   }}>Post</button>
                 </div>
+                <button onClick={() => handleDelete(selected)} style={{ background: "none", border: "1px solid #3a1a1a", borderRadius: 3, padding: "10px 18px", color: "#c0392b", fontSize: 12, cursor: "pointer", fontFamily: "inherit", marginTop: 16, letterSpacing: "0.08em", textTransform: "uppercase" }}>Delete Submission</button>
               </div>
             </div>
           </div>
